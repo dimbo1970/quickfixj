@@ -168,9 +168,16 @@ public class FIXMessageDecoder implements MessageDecoder {
                     while (hasRemaining(in)) {
                         ch = get(in);
                         if (!Character.isDigit((char) ch)) {
+                            if (bodyLength == 0) { // QFJ-903 - we started to parse length but encountered no digit
+                                handleError(in, in.position() + 1, "Encountered invalid body length: " + (char)ch,
+                                        false);
+                            }
                             break;
                         }
                         bodyLength = bodyLength * 10 + (ch - '0');
+                    }
+                    if (state == SEEKING_HEADER ) {
+                        continue;
                     }
                     if (ch == SOH) {
                         state = READING_BODY;
@@ -180,8 +187,8 @@ public class FIXMessageDecoder implements MessageDecoder {
                     } else {
                         if (hasRemaining(in)) {
                             String messageString = getMessageStringForError(in);
-                            handleError(in, in.position() + 1, "Length format error in message (last character:" + ch + "): " + messageString,
-                                    false);
+                            handleError(in, in.position() + 1, "Length format error in message (last character: " + (char)ch + "): " + messageString,
+                                false);
                             continue;
                         } else {
                             break;
